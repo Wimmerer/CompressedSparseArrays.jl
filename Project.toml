@@ -3,6 +3,10 @@ uuid = "1896f9a8-4580-4f6f-8a37-ee292235c46a"
 authors = ["Will Kimmerer <kimmerer@mit.edu> and contributors"]
 version = "0.1.0"
 
+[deps]
+SparseBase = "8047a082-0763-4c4f-a23b-a4a948721f1d"
+StorageOrders = "e9177fbf-8fde-426c-9425-4eed0f22262a"
+
 [compat]
 julia = "1"
 
