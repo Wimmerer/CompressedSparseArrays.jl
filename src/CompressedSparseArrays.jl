@@ -2,13 +2,13 @@ module CompressedSparseArrays
 
 using SparseBase
 using SparseBase: getoffset
-abstract type AbstractCompressedArray{Order, Bi, Tv, Tfill, Ti, N} <: SparseBase.AbstractSparseArray{Tv, Ti, N} end
-SparseBase.comptime_storageorder(::AbstractCompressedArray{O}) where O = O
+abstract type AbstractCompressedArray{Tv, Tfill, Order, Bi, Ti, N} <: SparseBase.AbstractSparseArray{Tv, Ti, N} end
+SparseBase.comptime_storageorder(::AbstractCompressedArray{<:Any, <:Any, O}) where O = O
 SparseBase.issparse(::AbstractCompressedArray) = true
 # SparseBase.levelformat!!!
 
-Base.eltype(::AbstractCompressedArray{<:Any, <:Any, Tv, Tfill}) where {Tv, Tfill} = Union{Tv, Tfill}
-mutable struct SinglyCompressedArray{Order, Bi, Tvalues, Tfill, Tindex<:Integer, 
+Base.eltype(::AbstractCompressedArray{Tv, Tfill}) where {Tv, Tfill} = Union{Tv, Tfill}
+mutable struct SinglyCompressedArray{Tvalues, Tfill, Order, Bi, Tindex<:Integer, 
         V<:AbstractArray{Tvalues}, I1<:AbstractVector{Tindex}, I2<:AbstractVector{Tindex}, N} <: 
         AbstractCompressedArray{Order, Bi, Tvalues, Tfill, Tindex, N}
     # Comments here reflect column major ordering. 
@@ -26,17 +26,17 @@ mutable struct SinglyCompressedArray{Order, Bi, Tvalues, Tfill, Tindex<:Integer,
     function SinglyCompressedArray{Order, Bi}(vlen, vdim, ptr::I, idx::I, v::V, fill::Tfill) where 
         {Order, Bi, V, I, Tfill}
         N = 2 + ndims(v) - 1
-        return new{Order, Bi, eltype(V), Tfill, eltype(I), V, I, N}(vlen, vdim, ptr, idx, v, fill)
+        return new{eltype(V), Tfill, Order, Bi, eltype(I), V, I, N}(vlen, vdim, ptr, idx, v, fill)
     end
 end
 
-const CSCMatrix{Bi, Tvalues, V, Tfill, Tindex, I} = SinglyCompressedArray{ColMajor(), Bi, Tvalues, V, Tfill, Tindex, I, 2} where
-    {Bi, Tvalues, V<:AbstractVector, Tfill, Tindex, I}
-const CSRMatrix{Bi, Tvalues, V, Tfill, Tindex, I} = SinglyCompressedArray{RowMajor(), Bi, Tvalues, V, Tfill, Tindex, I, 2} where
-{Bi, Tvalues, V<:AbstractVector, Tfill, Tindex, I}
+const CSCMatrix{Tvalues, Tfill, Bi, Tindex, V, I1, I2} = SinglyCompressedArray{Tfill, Tvalues, ColMajor(), Bi, Tindex, V, I1, I2, 2} where
+    {Bi, Tvalues, V<:AbstractVector, Tfill, Tindex, I1, I2}
+const CSRMatrix{Tvalues, Tfill, Bi, Tindex, V, I1, I2} = SinglyCompressedArray{Tvalues, Tfill, RowMajor(), Bi, Tindex, V, I1, I2, 2} where
+{Bi, Tvalues, V<:AbstractVector, Tfill, Tindex, I1, I2}
 
 
-SparseBase.setfill(A::SinglyCompressedArray{Order, Bi}, f) where {Order, Bi} = 
+SparseBase.setfill(A::SinglyCompressedArray{<:Any, <:Any, Order, Bi}, f) where {Order, Bi} = 
     SinglyCompressedArray{Order, Bi}(A.vlen, A.vdim, A.ptr, A.idx, A.v, f)
 function SparseBase.setfill!(A::SinglyCompressedArray, f)
     A.fill = f
@@ -45,16 +45,16 @@ end
 
 SparseBase.nstored(A::SinglyCompressedArray) = length(A.v)
 
-Base.size(A::SinglyCompressedArray{ColMajor(), <:Any, <:Any, <:AbstractVector}) = (A.vlen, A.vdim)
-Base.size(A::SinglyCompressedArray{ColMajor(), <:Any, <:Any, <:AbstractMatrix}) = (A.vlen, A.vdim, size(A.v, 1))
-Base.size(A::SinglyCompressedArray{ColMajor(), <:Any}) = (A.vlen, A.vdim, size(A.v)[1:end-1]...)
+Base.size(A::SinglyCompressedArray{<:Any, <:Any, ColMajor(), <:Any, <:Any, <:AbstractVector}) = (A.vlen, A.vdim)
+Base.size(A::SinglyCompressedArray{<:Any, <:Any, ColMajor(), <:Any, <:Any, <:AbstractMatrix}) = (A.vlen, A.vdim, size(A.v, 1))
+Base.size(A::SinglyCompressedArray{<:Any, <:Any, ColMajor()}) = (A.vlen, A.vdim, size(A.v)[1:end-1]...)
 
-Base.size(A::SinglyCompressedArray{RowMajor(), <:Any, <:Any, <:AbstractVector}) = (A.vdim, A.vlen)
-Base.size(A::SinglyCompressedArray{RowMajor(), <:Any, <:Any, <:AbstractMatrix}) = (A.vdim, A.vlen, size(A.v, 1))
-Base.size(A::SinglyCompressedArray{RowMajor(), <:Any}) = (A.vdim, A.vlen, size(A.v)[1:end-1]...)
+Base.size(A::SinglyCompressedArray{<:Any, <:Any, RowMajor(), <:Any, <:Any, <:AbstractVector}) = (A.vdim, A.vlen)
+Base.size(A::SinglyCompressedArray{<:Any, <:Any, RowMajor(), <:Any, <:Any, <:AbstractMatrix}) = (A.vdim, A.vlen, size(A.v, 1))
+Base.size(A::SinglyCompressedArray{<:Any, <:Any, RowMajor()}) = (A.vdim, A.vlen, size(A.v)[1:end-1]...)
 
 # Bi setup taken from SparseMatrixCSR.jl
-SparseBase.getoffset(::SinglyCompressedArray{O, Bi}) where {O, Bi} = getoffset(Bi)
+SparseBase.getoffset(::SinglyCompressedArray{<:Any, <:Any, <:Any, Bi}) where Bi = getoffset(Bi)
 
 swapindices(::RowMajor, row, col) = row, col
 swapindices(::ColMajor, row, col) = col, row
@@ -68,7 +68,7 @@ _indexintostored(v::AbstractVector, k, ::NTuple{N, <:Integer}) where N = length(
 _indexintostored(A::AbstractArray, k, x::NTuple{N, <:Integer}) where N = length(v) == 1 ? A[1] : 
     A[x[3:end]..., k]
 
-function Base.getindex(A::SinglyCompressedArray{Order, Bi, <:Any, <:Any, <:Any, <:Any, <:Any, N}, x::Vararg{<:Integer, N}) where 
+function Base.getindex(A::SinglyCompressedArray{<:Any, <:Any, Order, Bi, <:Any, <:Any, <:Any, <:Any, N}, x::Vararg{<:Integer, N}) where 
     {Order, Bi, N}
     @boundscheck checkbounds(A, x...) # the overloaded size should take care of doing this correctly.
     row, col = x[1:2]
@@ -85,7 +85,7 @@ function Base.getindex(A::SinglyCompressedArray{Order, Bi, <:Any, <:Any, <:Any, 
 end
 
 # Duplication here. Easy to split, but just two functions.
-function Base.isstored(A::SinglyCompressedArray{Order, Bi, <:Any, <:Any, <:Any, <:Any, N}, x::Vararg{<:Integer, N}) where 
+function Base.isstored(A::SinglyCompressedArray{<:Any, <:Any, Order, Bi, <:Any, <:Any, <:Any, <:Any, N}, x::Vararg{<:Integer, N}) where 
     {Order, Bi, N}
     @boundscheck checkbounds(A, x...) # the overloaded size should take care of doing this correctly.
     row, col = x[1:2]
@@ -101,7 +101,7 @@ function Base.isstored(A::SinglyCompressedArray{Order, Bi, <:Any, <:Any, <:Any, 
     return !((k > r2) || (A.idx[k] != jo)) # no need to check dense obviously
 end
 
-function Base.similar(A::SinglyCompressedArray{Order, Bi, <:Any, <:Any, <:Any, <:Ti}, ::Type{S}, dims::Dims) where
+function Base.similar(A::SinglyCompressedArray{<:Any, <:Any, Order, Bi, <:Ti}, ::Type{S}, dims::Dims) where
     {Order, Bi, Ti, S}
     vdim = Order === ColMajor() ? dims[2] : dims[1]
     v = if length(dims) == 2
