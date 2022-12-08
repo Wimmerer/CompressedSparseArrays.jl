@@ -8,6 +8,7 @@ SparseBase = "8047a082-0763-4c4f-a23b-a4a948721f1d"
 StorageOrders = "e9177fbf-8fde-426c-9425-4eed0f22262a"
 
 [compat]
+SparseBase = "0.1"
 julia = "1"
 
 [extras]
